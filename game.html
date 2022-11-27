@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GAME</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+        body,html {
+            width: 100vw;
+            height: 100vh;
+        }
+        body {
+            background-color: rgb(249, 113, 113);
+        }
+        #gameBox {
+            background-color: rgb(249, 113, 113);
+            position: relative;
+            margin: auto;
+            width: 550px;
+            height: 600px;
+        }
+
+        #GameDecorate {
+            position: absolute;
+            width: 550px;
+            height: 550px;
+            background-color: rgb(86, 86, 86);
+            border-radius: 20px;
+            top: 50px;
+            left: calc(50% - 275px);
+        }
+
+        #gameWindow {
+            border: 1px solid black;
+            position: absolute;
+            top: 25px;
+            left: 25px;
+            background-color: rgb(155, 193, 105);
+        }
+
+
+    </style>
+</head>
+
+<body>
+    <div id="gameBox">
+        <div id="GameDecorate">
+            <canvas id="gameWindow" width="500px" height="500px">您的浏览器不支持canvas，请更换浏览器或者升级您的浏览器</canvas>
+            
+        </div>
+
+    </div>
+</body>
+
+</html>
