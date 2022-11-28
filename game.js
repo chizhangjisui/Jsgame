@@ -4,8 +4,8 @@ let gameWindow = document.getElementById('gameWindow');
 
 //参数定义
 let ctx = gameWindow.getContext('2d');
-let mX;//鼠标坐标
-let mY;
+let mX = 250;//鼠标坐标
+let mY = 400;
 let playStatus = 0;//0表示游戏还没有开始状态,1表示正在进行游戏状态，2表示游戏在暂停状态
 let gameTimer;
 let player;//玩家
@@ -52,7 +52,10 @@ gameWindow.onmousemove = function (e) {
     mX = parseInt(e.x - gameWindow.getBoundingClientRect().left);
     mY = parseInt(e.y - gameWindow.getBoundingClientRect().top);
 }
-
+// gameWindow.ontouchmove = function (e) {
+//     mX = parseInt(e.x - gameWindow.getBoundingClientRect().left);
+//     mY = parseInt(e.y - gameWindow.getBoundingClientRect().top);
+// }
 //初始化游戏
 function initGame() {
     console.log('初始化游戏');
