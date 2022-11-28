@@ -119,6 +119,7 @@ class Player {
 }
 //敌人类
 class Enemy {
+    name;
     x;
     y;
     HP;
@@ -126,24 +127,28 @@ class Enemy {
     speed;
     score = 10;//击杀后可以获得的分数
     status = 0;//0存活，1被击中，2已经撤离
-    constructor(x, y, HP, R, speed) {
+    constructor(name, x, y, HP, R, speed) {
+        this.name = name;
         this.x = x;
         this.y = y;
         this.HP = HP;
         this.R = R;
-        this.speed;
+        this.speed = speed;
     }
     draw(ctx) {
         ctx.beginPath();
-        ctx.strokeStyle = 'rgb(165,165,45)';
-        ctx.fillStyle = 'rgb(165,165,45)';
-        ctx.arc(this.x, this.y, R, 0, Math.PI * 2, false);
+        ctx.strokeStyle = 'rgb(0,0,0)';
+        ctx.fillStyle = 'rgb(165,255,45)';
+        ctx.arc(this.x, this.y, this.R, 0, Math.PI * 2, false);
         ctx.fill();
     }
     move(ctx) {
         if (this.status == 0) {
             this.y = this.y + this.speed;
             this.draw(ctx);
+            if(this.y > 550){
+                this.status = 2;
+            }
         }
     }
 }
@@ -166,18 +171,45 @@ function initGame() {
 function formatZero(num, len) {
     if (String(num).length < len) {
         let score = num;
-        for(let i=0;i<=len - String(num).length;i++){
-            score = '0'+score
+        for (let i = 0; i <= len - String(num).length; i++) {
+            score = '0' + score
         }
         return score;
-    }else{
+    } else {
         return 99999999;
     }
 }
-
+//生成[a,b)间的随机数
+function mathAnd(a, b) {
+    let result = Math.random() * (b - a) + a;
+    return parseInt(result);
+}
 //分数更新
 function scoreupdata() {
-    scoreDiv.innerHTML = '|' + formatZero(score + parseInt(gameTime),8) + '|';//总分数为score加上时间
+    scoreDiv.innerHTML = '|' + formatZero(score + parseInt(gameTime), 8) + '|';//总分数为score加上时间
+}
+//敌人类型一
+function makeEnemy01() {
+    let R = mathAnd(10,40);//半径随机
+    let HP = R/10;//半径越大，HP越多
+    let speed = 5-HP;//HP越多，速度越慢
+    let enemy01 = new Enemy('石头', 30+Math.random() * 470, Math.random() * (-300), HP, R, speed);
+    return enemy01;
+}
+//敌人生成与删除 随着分数的增加 难度增加
+function enemyMake() {
+    //检测敌人状态，不符合要求删除。
+    for(let i=0;i<enemy.length;i++){
+        if(enemy[i].status == 2||enemy[i].status == 1){
+            enemy.splice(i,1);
+        }
+    }
+    //当分数小于100时会生成4个敌人
+    if (score + gameTime < 100) {
+        while(enemy.length<4){
+            enemy.push(makeEnemy01());
+        }
+    }
 }
 //进行游戏
 function Game() {
@@ -185,11 +217,16 @@ function Game() {
         ctx.clearRect(0, 0, 500, 500)
         gameTime += 0.01;//更新游戏时间
         scoreupdata();//更新分数
+        enemyMake();//敌人生成
         player.fire();//自动开火
-        for (blt of player.magazineClip) {
-            blt.move(ctx);
+        for (v of player.magazineClip) {
+            v.move(ctx);
         }//子弹移动
         player.move(ctx, mX, mY);//玩家移动
+        for(v of enemy){
+            v.move(ctx);
+        }//敌人移动
+
     }, 10);
 
 }
