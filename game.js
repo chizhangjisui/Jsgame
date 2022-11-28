@@ -151,6 +151,18 @@ class Enemy {
             }
         }
     }
+    //判断子弹是否击中
+    isCrash(blt){
+        if(((blt.x - this.x) ** 2 + (blt.y - this.y) ** 2) ** 0.5<this.R && blt.status == 1){
+            this.HP-=player.atk;
+            if(this.HP<=0){
+                score+=this.score;
+                this.status = 1;
+            }
+            return true;
+        }
+        return false;
+    }
 }
 
 //获取鼠标的坐标
@@ -164,7 +176,7 @@ gameWindow.onmousemove = function (e) {
 // }
 //初始化游戏
 function initGame() {
-    player = new Player(3, 250, 400, 3, 1, 4, 0);
+    player = new Player(3, 250, 400, 1, 1, 4, 0);
     player.draw(ctx);
 }
 //数字补零
@@ -192,23 +204,34 @@ function scoreupdata() {
 function makeEnemy01() {
     let R = mathAnd(10,40);//半径随机
     let HP = R/10;//半径越大，HP越多
-    let speed = 5-HP;//HP越多，速度越慢
+    let speed = 3-3*HP/4;//HP越多，速度越慢
     let enemy01 = new Enemy('石头', 30+Math.random() * 470, Math.random() * (-300), HP, R, speed);
     return enemy01;
 }
 //敌人生成与删除 随着分数的增加 难度增加
 function enemyMake() {
-    //检测敌人状态，不符合要求删除。
+    //检测敌人与子弹碰撞若碰撞更改敌人状态，根据敌人的状态将不符合要求删除。
     for(let i=0;i<enemy.length;i++){
+        //检测子弹碰撞
+        for(v of player.magazineClip){
+            if(enemy[i].isCrash(v)){
+                v.status = 2;
+            }
+        }
         if(enemy[i].status == 2||enemy[i].status == 1){
             enemy.splice(i,1);
         }
     }
     //当分数小于100时会生成4个敌人
-    if (score + gameTime < 100) {
-        while(enemy.length<4){
-            enemy.push(makeEnemy01());
-        }
+    // if (score + gameTime < 100) {
+    //     while(enemy.length<4){
+    //         enemy.push(makeEnemy01());
+    //     }
+    // }
+
+    //测试ing
+    while(enemy.length<4){
+        enemy.push(makeEnemy01());
     }
 }
 //进行游戏
