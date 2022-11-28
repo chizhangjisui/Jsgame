@@ -12,11 +12,11 @@
             padding: 0;
         }
         #gameBox {
-            background-color: rgb(249, 113, 113);
+            background-color: rgb(32, 32, 32);
             position: relative;
             margin: 100px auto;
             width: 600px;
-            height: 600px;
+            height: 700px;
         }
 
         #GameDecorate {
@@ -37,7 +37,18 @@
             background-color: rgb(155, 193, 105);
         }
 
+        #option {
+            position:absolute;
+            width: 600px;
+            display: flex;
+            justify-content: center;
+            top: 600px;
+            color: white;
+        }
 
+        #option #startBtn {
+            font-size: 40px;
+        }
     </style>
 </head>
 
@@ -47,8 +58,10 @@
             <canvas id="gameWindow" width="500px" height="500px">您的浏览器不支持canvas，请更换浏览器或者升级您的浏览器</canvas>
             
         </div>
-
+        <div id="option">
+            <button id="startBtn">START</button>
+        </div>
     </div>
 </body>
-<script></script>
+<script src="./game.js" type="text/javascript" charset="utf-8"></script>
 </html>
