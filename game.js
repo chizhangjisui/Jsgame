@@ -1,9 +1,12 @@
 //获取document元素
 let startBtn = document.getElementById('startBtn');
 let gameWindow = document.getElementById('gameWindow');
+let scoreDiv = document.getElementById('score');
 
 //参数定义
 let ctx = gameWindow.getContext('2d');
+let score = 0;//分数
+let gameTime = 0;//游戏时间
 let mX = 250;//鼠标坐标
 let mY = 400;
 let playStatus = 0;//0表示游戏还没有开始状态,1表示正在进行游戏状态，2表示游戏在暂停状态
@@ -114,6 +117,36 @@ class Player {
 
     }
 }
+//敌人类
+class Enemy {
+    x;
+    y;
+    HP;
+    R;
+    speed;
+    score = 10;//击杀后可以获得的分数
+    status = 0;//0存活，1被击中，2已经撤离
+    constructor(x, y, HP, R, speed) {
+        this.x = x;
+        this.y = y;
+        this.HP = HP;
+        this.R = R;
+        this.speed;
+    }
+    draw(ctx) {
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgb(165,165,45)';
+        ctx.fillStyle = 'rgb(165,165,45)';
+        ctx.arc(this.x, this.y, R, 0, Math.PI * 2, false);
+        ctx.fill();
+    }
+    move(ctx) {
+        if (this.status == 0) {
+            this.y = this.y + this.speed;
+            this.draw(ctx);
+        }
+    }
+}
 
 //获取鼠标的坐标
 gameWindow.onmousemove = function (e) {
@@ -129,16 +162,34 @@ function initGame() {
     player = new Player(3, 250, 400, 3, 1, 4, 0);
     player.draw(ctx);
 }
+//数字补零
+function formatZero(num, len) {
+    if (String(num).length < len) {
+        let score = num;
+        for(let i=0;i<=len - String(num).length;i++){
+            score = '0'+score
+        }
+        return score;
+    }else{
+        return 99999999;
+    }
+}
 
+//分数更新
+function scoreupdata() {
+    scoreDiv.innerHTML = '|' + formatZero(score + parseInt(gameTime),8) + '|';//总分数为score加上时间
+}
 //进行游戏
 function Game() {
     gameTimer = setInterval(function () {
         ctx.clearRect(0, 0, 500, 500)
-        player.fire();
-        for(blt of player.magazineClip){
+        gameTime += 0.01;//更新游戏时间
+        scoreupdata();//更新分数
+        player.fire();//自动开火
+        for (blt of player.magazineClip) {
             blt.move(ctx);
-        }
-        player.move(ctx, mX, mY);
+        }//子弹移动
+        player.move(ctx, mX, mY);//玩家移动
     }, 10);
 
 }
