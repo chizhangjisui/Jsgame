@@ -108,6 +108,7 @@ class Player {
                 ctx.strokeStyle = 'black';
                 ctx.font = '60px 微软雅黑'
                 ctx.fillText(formatZero(score + parseInt(gameTime), 8),100,250);
+                startBtn.innerHTML = 'START';
             }
         }
         ctx.beginPath();
@@ -148,12 +149,10 @@ class Player {
     isCrash(blt) {
         //console.log('距离：'+((blt.x - this.x) ** 2 + (blt.y - this.y) ** 2) ** 0.5+"半径和:"+blt.R+this.R)
         if (((blt.x - this.x) ** 2 + (blt.y - this.y) ** 2) ** 0.5 < blt.R + this.R && blt.status == 0 && this.status == 0) {
-            console.log('碰撞');
             this.HP = this.HP - blt.HP//与撞击物的HP相减
             if (this.HP <= 0) {
                 this.status = 1;
             }
-            console.log('玩家发生碰撞');
             return true;
         }
         return false;
