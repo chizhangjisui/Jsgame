@@ -126,7 +126,10 @@ class Enemy {
     R;
     speed;
     score = 10;//击杀后可以获得的分数
-    status = 0;//0存活，1被击中，2已经撤离
+    status = 0;//0存活，1被击中，2要求删除
+
+    //爆炸动画
+    booAnimation;
     constructor(name, x, y, HP, R, speed) {
         this.name = name;
         this.x = x;
@@ -134,6 +137,7 @@ class Enemy {
         this.HP = HP;
         this.R = R;
         this.speed = speed;
+        this.booAnimation = new BooAnimation(this.R, 0.1, 'rgb(165,255,45)');
     }
     draw(ctx) {
         ctx.beginPath();
@@ -146,17 +150,23 @@ class Enemy {
         if (this.status == 0) {
             this.y = this.y + this.speed;
             this.draw(ctx);
-            if(this.y > 550){
+            if (this.y > 550) {
                 this.status = 2;
             }
         }
+        if (this.status == 1) {
+            if (this.booAnimation.drew(ctx, this.x, this.y)) {
+                this.status = 2;
+            };
+
+        }
     }
     //判断子弹是否击中
-    isCrash(blt){
-        if(((blt.x - this.x) ** 2 + (blt.y - this.y) ** 2) ** 0.5<this.R && blt.status == 1){
-            this.HP-=player.atk;
-            if(this.HP<=0){
-                score+=this.score;
+    isCrash(blt) {
+        if (((blt.x - this.x) ** 2 + (blt.y - this.y) ** 2) ** 0.5 < this.R && blt.status == 1&&this.status == 0) {
+            this.HP -= player.atk;
+            if (this.HP <= 0) {
+                score += this.score;
                 this.status = 1;
             }
             return true;
@@ -165,6 +175,48 @@ class Enemy {
     }
 }
 
+class BooAnimation {
+    R;
+    color;
+    stutas = 1;
+    timer = 0;
+    time = 100;//爆炸持续时间
+
+    //动画所要的参数
+    r = 0;
+    v = 5;//爆炸变化速度
+
+    constructor(R, v, color) {
+        this.R = R;
+        this.r = R;
+        this.v = v;
+        this.color = color;
+    }
+    drew(ctx, X, Y) {
+        this.timer++;
+        if (this.timer > this.time) {
+            return true;
+        }
+
+        for (let i = 0; i < Math.PI * this.R * 0.5; i++) {
+            this.r += this.v;
+            if (this.r > this.R * 1.3) {
+                this.v = -this.v;
+            }
+            if (this.r < -this.R) {
+                this.v = -this.v;
+            }
+            let R = parseInt(Math.random() * (this.r + 1));
+            let x = Math.random() * R * ((-1) ** (parseInt(Math.random() * 2) + 1)) + X;
+            let y = (-1) ** (parseInt(Math.random() * 2) + 1) * ((R ** 2 - ((x - X) ** 2)) ** 0.5) + Y;
+            ctx.beginPath();
+            ctx.fillStyle = this.color;
+            ctx.arc(x, y, 2, R, Math.PI * 2, false);
+            ctx.fill();
+        }
+        return false;
+    }
+}
 //获取鼠标的坐标
 gameWindow.onmousemove = function (e) {
     mX = parseInt(e.x - gameWindow.getBoundingClientRect().left);
@@ -202,24 +254,24 @@ function scoreupdata() {
 }
 //敌人类型一
 function makeEnemy01() {
-    let R = mathAnd(10,40);//半径随机
-    let HP = R/10;//半径越大，HP越多
-    let speed = 3-3*HP/4;//HP越多，速度越慢
-    let enemy01 = new Enemy('石头', 30+Math.random() * 470, Math.random() * (-300), HP, R, speed);
+    let R = mathAnd(10, 40);//半径随机
+    let HP = R / 10;//半径越大，HP越多
+    let speed = 2 - 2 * HP / 4;//HP越多，速度越慢
+    let enemy01 = new Enemy('石头', 30 + Math.random() * 470, Math.random() * (-300), HP, R, speed);
     return enemy01;
 }
 //敌人生成与删除 随着分数的增加 难度增加
 function enemyMake() {
     //检测敌人与子弹碰撞若碰撞更改敌人状态，根据敌人的状态将不符合要求删除。
-    for(let i=0;i<enemy.length;i++){
+    for (let i = 0; i < enemy.length; i++) {
         //检测子弹碰撞
-        for(v of player.magazineClip){
-            if(enemy[i].isCrash(v)){
+        for (v of player.magazineClip) {
+            if (enemy[i].isCrash(v)) {
                 v.status = 2;
             }
         }
-        if(enemy[i].status == 2||enemy[i].status == 1){
-            enemy.splice(i,1);
+        if (enemy[i].status == 2) {
+            enemy.splice(i, 1);
         }
     }
     //当分数小于100时会生成4个敌人
@@ -230,7 +282,7 @@ function enemyMake() {
     // }
 
     //测试ing
-    while(enemy.length<4){
+    while (enemy.length < 4) {
         enemy.push(makeEnemy01());
     }
 }
@@ -246,7 +298,7 @@ function Game() {
             v.move(ctx);
         }//子弹移动
         player.move(ctx, mX, mY);//玩家移动
-        for(v of enemy){
+        for (v of enemy) {
             v.move(ctx);
         }//敌人移动
 
