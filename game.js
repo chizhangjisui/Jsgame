@@ -19,26 +19,29 @@ class Bullet {
     x;
     y;
     color;
+    HP;
     R;
     speed;
-    status = 0;//0没有发射处于弹夹中，1处于发射状态，2击中目标状态
+    status = 1;//1没有发射处于弹夹中，0处于发射状态，2击中目标状态
     long = 0;//记录子弹飞行的距离
     Maxlong = 490;//子弹飞行的最大距离
     orientation;//子弹方向
-    constructor(R, speed, color) {
+    constructor(HP, R, speed, color) {
+        this.HP = HP;
         this.R = R;
         this.speed = speed;
         this.color = color;
     }
     draw(ctx) {
         ctx.beginPath();
+
         ctx.fillStyle = this.color;
         ctx.strokeStyle = this.color;
         ctx.arc(this.x, this.y, this.R, 0, 2 * Math.PI, false);
         ctx.fill();
     }
     move(ctx) {
-        if (this.status == 1) {
+        if (this.status == 0) {
             this.length = this.length + this.speed;//计算子弹飞行的距离
             this.y = Math.sin(Math.PI / 180 * this.orientation) * this.speed + this.y;
             this.x = Math.cos(Math.PI / 180 * this.orientation) * this.speed + this.x;
@@ -54,7 +57,7 @@ class Bullet {
         this.x = x;
         this.y = y;
         this.orientation = orientation;
-        this.status = 1;
+        this.status = 0;
     }
 }
 //玩家类
@@ -64,13 +67,16 @@ class Player {
     y;
     atk;
     df;
+    R = 15;
     speed;
+    status = 0;//0为存活态，1为死亡态
     BulletSpeed = 6;
     bullet_cth = 0;//将要发射的第n个子弹
     fireTiming = 0;//计算上次发射子弹的时间 
     fireTime = 500;//发射子弹的间隔时间
     atkMethod;//0普通攻击模式，1散射攻击模式，2激光攻击模式
     magazineClip = [];//弹夹
+    booAnimation;
     constructor(HP, x, y, atk, df, speed, atkMethod) {
         this.HP = HP;
         this.x = x;
@@ -79,22 +85,40 @@ class Player {
         this.df = df;
         this.speed = speed;
         this.atkMethod = atkMethod;
+        this.booAnimation = new BooAnimation(this.R, 0.1);
         for (let i = 0; i < 20; i++) {//初始化弹夹
             console.log('初始化弹夹');
-            this.magazineClip.push(new Bullet(3, this.BulletSpeed, 'rgb(244,244,244)'));
+            this.magazineClip.push(new Bullet(this.atk, 3, this.BulletSpeed, 'rgb(244,244,244)'));
         }
     }
     draw(ctx) {
+        if (this.status != 1) {
+            player.fire();//自动开火
+            ctx.beginPath();
+            ctx.fillStyle = 'black';
+            ctx.strokeStyle = 'black';
+            ctx.arc(this.x, this.y, 15, 0, 2 * Math.PI, false);
+            ctx.fill();
+        } else {
+            //玩家死亡后的处理
+            if (this.booAnimation.drew(ctx, this.x, this.y)) {
+                playStatus = 0;
+                ctx.beginPath();
+                ctx.fillStyle = 'black';
+                ctx.strokeStyle = 'black';
+                ctx.font = '60px 微软雅黑'
+                ctx.fillText(formatZero(score + parseInt(gameTime), 8),100,250);
+            }
+        }
         ctx.beginPath();
         ctx.fillStyle = 'black';
         ctx.strokeStyle = 'black';
-        ctx.arc(this.x, this.y, 15, 0, 2 * Math.PI, false);
-        ctx.fill();
+        ctx.font = '30px 微软雅黑';
+        ctx.fillText('HP:' + this.HP.toFixed(2), 0, 30);
     }
     fire() {
         this.fireTiming += 10;
         if (this.fireTiming > this.fireTime) {
-            console.log('发射')
             if (this.bullet_cth < this.magazineClip.length) {
                 this.magazineClip[this.bullet_cth].fire(this.x, this.y, -90);
             } else {
@@ -107,14 +131,32 @@ class Player {
 
     }
     move(ctx, x, y) {
-        if (((x - this.x) ** 2 + (y - this.y) ** 2) ** 0.5 < 4) {//防止出现抖动
+        if (this.status == 1) {
             this.draw(ctx);
         } else {
-            this.x = this.x + this.speed * (x - this.x) / (((x - this.x) ** 2 + (y - this.y) ** 2) ** 0.5);
-            this.y = this.y + this.speed * (y - this.y) / (((x - this.x) ** 2 + (y - this.y) ** 2) ** 0.5);
-            this.draw(ctx);
+            if (((x - this.x) ** 2 + (y - this.y) ** 2) ** 0.5 < 4) {//防止出现抖动
+                this.draw(ctx);
+            } else {
+                this.x = this.x + this.speed * (x - this.x) / (((x - this.x) ** 2 + (y - this.y) ** 2) ** 0.5);
+                this.y = this.y + this.speed * (y - this.y) / (((x - this.x) ** 2 + (y - this.y) ** 2) ** 0.5);
+                this.draw(ctx);
+            }
         }
 
+    }
+    //判断发生撞击
+    isCrash(blt) {
+        //console.log('距离：'+((blt.x - this.x) ** 2 + (blt.y - this.y) ** 2) ** 0.5+"半径和:"+blt.R+this.R)
+        if (((blt.x - this.x) ** 2 + (blt.y - this.y) ** 2) ** 0.5 < blt.R + this.R && blt.status == 0 && this.status == 0) {
+            console.log('碰撞');
+            this.HP = this.HP - blt.HP//与撞击物的HP相减
+            if (this.HP <= 0) {
+                this.status = 1;
+            }
+            console.log('玩家发生碰撞');
+            return true;
+        }
+        return false;
     }
 }
 //敌人类
@@ -137,7 +179,7 @@ class Enemy {
         this.HP = HP;
         this.R = R;
         this.speed = speed;
-        this.booAnimation = new BooAnimation(this.R, 0.1, 'rgb(165,255,45)');
+        this.booAnimation = new BooAnimation(this.R, 0.1);
     }
     draw(ctx) {
         ctx.beginPath();
@@ -161,10 +203,10 @@ class Enemy {
 
         }
     }
-    //判断子弹是否击中
+    //判断碰撞
     isCrash(blt) {
-        if (((blt.x - this.x) ** 2 + (blt.y - this.y) ** 2) ** 0.5 < this.R && blt.status == 1&&this.status == 0) {
-            this.HP -= player.atk;
+        if (((blt.x - this.x) ** 2 + (blt.y - this.y) ** 2) ** 0.5 < this.R + blt.R * 0.8 && blt.status == 0 && this.status == 0) {
+            this.HP -= blt.HP;
             if (this.HP <= 0) {
                 score += this.score;
                 this.status = 1;
@@ -177,20 +219,19 @@ class Enemy {
 
 class BooAnimation {
     R;
-    color;
+    color = 'rgb(190,15,15)';
     stutas = 1;
     timer = 0;
     time = 100;//爆炸持续时间
 
     //动画所要的参数
     r = 0;
-    v = 5;//爆炸变化速度
+    v = 1;//爆炸变化速度
 
-    constructor(R, v, color) {
+    constructor(R, v) {
         this.R = R;
         this.r = R;
         this.v = v;
-        this.color = color;
     }
     drew(ctx, X, Y) {
         this.timer++;
@@ -198,20 +239,31 @@ class BooAnimation {
             return true;
         }
 
-        for (let i = 0; i < Math.PI * this.R * 0.5; i++) {
+        for (let i = 0; i < Math.PI * this.R; i++) {
             this.r += this.v;
             if (this.r > this.R * 1.3) {
                 this.v = -this.v;
             }
-            if (this.r < -this.R) {
+            if (this.r < this.R * 0.3) {
                 this.v = -this.v;
             }
-            let R = parseInt(Math.random() * (this.r + 1));
+            let R = Math.random() * this.r;
             let x = Math.random() * R * ((-1) ** (parseInt(Math.random() * 2) + 1)) + X;
             let y = (-1) ** (parseInt(Math.random() * 2) + 1) * ((R ** 2 - ((x - X) ** 2)) ** 0.5) + Y;
             ctx.beginPath();
             ctx.fillStyle = this.color;
-            ctx.arc(x, y, 2, R, Math.PI * 2, false);
+            let r;
+            if (R < this.r * 0.5) {
+                r = Math.random()
+            } else {
+                r = 3 * Math.random()
+            }
+            if (R < this.r * 0.4) {
+                ctx.fillStyle = 'rgb(200,100,50)';
+            } else {
+                ctx.fillStyle = this.color;
+            }
+            ctx.arc(x, y, r, R, Math.PI * 2, false);
             ctx.fill();
         }
         return false;
@@ -228,7 +280,9 @@ gameWindow.onmousemove = function (e) {
 // }
 //初始化游戏
 function initGame() {
-    player = new Player(3, 250, 400, 1, 1, 4, 0);
+    score = 0;
+    gameTime = 0;
+    player = new Player(4, 250, 400, 1, 1, 4, 0);
     player.draw(ctx);
 }
 //数字补零
@@ -255,16 +309,24 @@ function scoreupdata() {
 //敌人类型一
 function makeEnemy01() {
     let R = mathAnd(10, 40);//半径随机
-    let HP = R / 10;//半径越大，HP越多
-    let speed = 2 - 2 * HP / 4;//HP越多，速度越慢
+    let HP = R / 13;//半径越大，HP越多
+    let speed = 2.5 - 2 * HP / 4;//HP越多，速度越慢
     let enemy01 = new Enemy('石头', 30 + Math.random() * 470, Math.random() * (-300), HP, R, speed);
     return enemy01;
 }
-//敌人生成与删除 随着分数的增加 难度增加
-function enemyMake() {
-    //检测敌人与子弹碰撞若碰撞更改敌人状态，根据敌人的状态将不符合要求删除。
+//玩家状态更新
+function playerUpdateStatus() {
+    //判断玩家是否与敌人发生撞击
     for (let i = 0; i < enemy.length; i++) {
-        //检测子弹碰撞
+        player.isCrash(enemy[i]);
+    }
+}
+//敌人状态更新，和删除敌人
+function enemyUpdateStatus() {
+    //检测敌人碰撞若碰撞更改敌人状态，根据敌人的状态将不符合要求删除。
+    for (let i = 0; i < enemy.length; i++) {
+        //检测碰撞
+        enemy[i].isCrash(player);
         for (v of player.magazineClip) {
             if (enemy[i].isCrash(v)) {
                 v.status = 2;
@@ -274,6 +336,10 @@ function enemyMake() {
             enemy.splice(i, 1);
         }
     }
+}
+//敌人生成 随着分数的增加 难度增加
+function enemyMake() {
+
     //当分数小于100时会生成4个敌人
     // if (score + gameTime < 100) {
     //     while(enemy.length<4){
@@ -290,10 +356,14 @@ function enemyMake() {
 function Game() {
     gameTimer = setInterval(function () {
         ctx.clearRect(0, 0, 500, 500)
-        gameTime += 0.01;//更新游戏时间
+        if (player.status != 1) {
+            gameTime += 0.01;//更新游戏时间
+        }
         scoreupdata();//更新分数
+        enemyUpdateStatus();//敌人状态更新
+        playerUpdateStatus();//玩家状态更新
         enemyMake();//敌人生成
-        player.fire();//自动开火
+
         for (v of player.magazineClip) {
             v.move(ctx);
         }//子弹移动
@@ -310,7 +380,8 @@ function Game() {
 startBtn.onclick = () => {
     if (playStatus == 0) {
         playStatus = 1;
-        startBtn.innerHTML = 'PAUSE';
+        startBtn.innerHTML = 'START';
+        clearInterval(gameTimer);
         initGame();
         Game();
     } else if (playStatus == 1) {
