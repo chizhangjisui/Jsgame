@@ -13,6 +13,7 @@ let playStatus = 0;//0表示游戏还没有开始状态,1表示正在进行游�
 let gameTimer;
 let player;//玩家
 let enemy = [];//敌人
+let daoju = [];//道具
 
 //子弹类
 class Bullet {
@@ -58,6 +59,98 @@ class Bullet {
         this.y = y;
         this.orientation = orientation;
         this.status = 0;
+    }
+}
+//道具类 
+class Daoju {
+    x;
+    y;
+    R = 15;
+    status = 0;//0还没有被玩家拾取，1被玩拾取，2可以被删除
+    text;//写在道具上的文字 H代表生命道具
+    speedY = 1;//Y轴上的移动速度
+    speedX = 1;//X轴上的移动速度
+    color = 'rgb(255,215,0,1)';
+    //变换用的参数
+    a = 1;
+    constructor(x,y,text) {
+        this.text = text;
+        this.x=x;
+        this.y=y;
+    }
+    //道具的功能
+    itsFunction(player) {
+        //生命增加
+        if (this.text == 'H') {
+            //最多HP到10，之后会加分
+            if (player.HP <= 8) {
+                player.HP += 2;
+            }else if(player.HP >=8 && player.HP<=10){
+                player.HP = 10;
+            }
+            if(player.HP >= 10){
+                score+=20;
+            }
+        }
+    }
+    //状态为0的处理方法
+    life() {
+        if (this.y <= 515) {
+            this.drew(ctx);
+        } else {
+            this.status = 2;
+        }
+
+    }
+    //状态为1的处理方式
+    isPick(ctx) {
+        if (this.a <= 0) {
+            this.status = 2;
+        } else {
+            this.a -= 0.01
+        }
+        this.drew(ctx);
+    }
+    //道具的移动方式
+    move() {
+        this.y += this.speedY;
+        this.x += this.speedX;
+        if (this.x > 500) {
+            this.speedX = -this.speedX;
+        }
+        if (this.x < 0) {
+            this.speedX = -this.speedX;
+        }
+    }
+    updata(ctx) {
+        if (this.status == 0) {
+            this.life(ctx);
+            this.move();
+        }
+        if(this.status == 1){
+            this.isPick(ctx);
+        }
+    }
+    drew(ctx) {
+        ctx.beginPath();
+        // ctx.fillStyle = 'rgb(0,0,0)'
+        ctx.font = '20px 宋体';
+        //ctx.globalAlpha = this.a;
+        ctx.fillStyle = 'rgb(255,215,0,'+this.a+')';
+        ctx.arc(this.x, this.y, this.R, 0, 2 * Math.PI, false);
+        ctx.fill();
+        ctx.fillStyle = 'rgb(0,0,0)';
+        ctx.fillText(this.text, this.x-5, this.y+6);
+        
+    }
+    statusSolve() {
+
+    }
+    isCrash(player) {
+        if (((player.x - this.x) ** 2 + (player.y - this.y) ** 2) ** 0.5 < this.R + player.R && player.status == 0 &&this.status == 0) {
+            this.itsFunction(player);
+            this.status = 1;
+        }
     }
 }
 //玩家类
@@ -107,7 +200,7 @@ class Player {
                 ctx.fillStyle = 'black';
                 ctx.strokeStyle = 'black';
                 ctx.font = '60px 微软雅黑'
-                ctx.fillText(formatZero(score + parseInt(gameTime), 8),100,250);
+                ctx.fillText(formatZero(score + parseInt(gameTime), 8), 100, 250);
                 startBtn.innerHTML = 'START';
             }
         }
@@ -167,8 +260,8 @@ class Enemy {
     R;
     speed;
     score = 10;//击杀后可以获得的分数
-    status = 0;//0存活，1被击中，2要求删除
-
+    status = 0;//0存活，1敌人死亡状态，2要求删除
+    daojuProbability = 0;//敌人爆出装备的概率
     //爆炸动画
     booAnimation;
     constructor(name, x, y, HP, R, speed) {
@@ -187,19 +280,33 @@ class Enemy {
         ctx.arc(this.x, this.y, this.R, 0, Math.PI * 2, false);
         ctx.fill();
     }
-    move(ctx) {
+    //移动方式
+    move() {
+        this.y = this.y + this.speed;
+    }
+    //存活处理
+    life(ctx) {
+        this.move();
+        this.draw(ctx);
+        if (this.y > 550) {
+            this.status = 2;
+        }
+    }
+    //死亡处理 
+    die(ctx) {
+        this.move();
+        if (this.booAnimation.drew(ctx, this.x, this.y)) {
+
+            this.status = 2;
+        };
+    }
+    //根据状态做出对应的处理
+    updata(ctx) {
         if (this.status == 0) {
-            this.y = this.y + this.speed;
-            this.draw(ctx);
-            if (this.y > 550) {
-                this.status = 2;
-            }
+            this.life(ctx);
         }
         if (this.status == 1) {
-            if (this.booAnimation.drew(ctx, this.x, this.y)) {
-                this.status = 2;
-            };
-
+            this.die(ctx);
         }
     }
     //判断碰撞
@@ -208,6 +315,10 @@ class Enemy {
             this.HP -= blt.HP;
             if (this.HP <= 0) {
                 score += this.score;
+                if(Math.random()<=this.daojuProbability){//道具随机生成
+                    console.log('道具生成');
+                    daoju.push(new Daoju(this.x,this.y,'H'));
+                }
                 this.status = 1;
             }
             return true;
@@ -311,17 +422,27 @@ function makeEnemy01() {
     let HP = R / 13;//半径越大，HP越多
     let speed = 2.5 - 2 * HP / 4;//HP越多，速度越慢
     let enemy01 = new Enemy('石头', 30 + Math.random() * 470, Math.random() * (-300), HP, R, speed);
+    enemy01.daojuProbability = 0.05;
     return enemy01;
 }
-//玩家状态更新
-function playerUpdateStatus() {
+//道具的碰撞检测和删除
+function daojuisCrashandDelete() {
+    for (let i = 0; i < daoju.length; i++) {
+        v.isCrash(player);
+        if (v.status == 2) {
+            daoju.splice(i, 1);
+        }
+    }
+}
+//玩家碰撞检测
+function playerisCrash() {
     //判断玩家是否与敌人发生撞击
     for (let i = 0; i < enemy.length; i++) {
         player.isCrash(enemy[i]);
     }
 }
-//敌人状态更新，和删除敌人
-function enemyUpdateStatus() {
+//敌人碰撞检测，和删除敌人
+function enemyisCrashandDelete() {
     //检测敌人碰撞若碰撞更改敌人状态，根据敌人的状态将不符合要求删除。
     for (let i = 0; i < enemy.length; i++) {
         //检测碰撞
@@ -359,8 +480,9 @@ function Game() {
             gameTime += 0.01;//更新游戏时间
         }
         scoreupdata();//更新分数
-        enemyUpdateStatus();//敌人状态更新
-        playerUpdateStatus();//玩家状态更新
+        daojuisCrashandDelete();//道具碰撞检测，和删除道具
+        enemyisCrashandDelete();//敌人碰撞检测，和删除敌人
+        playerisCrash();//玩家碰撞检测
         enemyMake();//敌人生成
 
         for (v of player.magazineClip) {
@@ -368,9 +490,11 @@ function Game() {
         }//子弹移动
         player.move(ctx, mX, mY);//玩家移动
         for (v of enemy) {
-            v.move(ctx);
+            v.updata(ctx);
         }//敌人移动
-
+        for (v of daoju) {
+            v.updata(ctx);
+        }
     }, 10);
 
 }
@@ -379,7 +503,7 @@ function Game() {
 startBtn.onclick = () => {
     if (playStatus == 0) {
         playStatus = 1;
-        startBtn.innerHTML = 'START';
+        startBtn.innerHTML = 'PAUSE';
         clearInterval(gameTimer);
         initGame();
         Game();
