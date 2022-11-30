@@ -14,7 +14,7 @@ let gameTimer;
 let player;//玩家
 let enemy = [];//敌人
 let daoju = [];//道具
-
+let daojuText = ['H', 'U']
 //子弹类
 class Bullet {
     x;
@@ -35,7 +35,6 @@ class Bullet {
     }
     draw(ctx) {
         ctx.beginPath();
-
         ctx.fillStyle = this.color;
         ctx.strokeStyle = this.color;
         ctx.arc(this.x, this.y, this.R, 0, 2 * Math.PI, false);
@@ -73,10 +72,10 @@ class Daoju {
     color = 'rgb(255,215,0,1)';
     //变换用的参数
     a = 1;
-    constructor(x,y,text) {
+    constructor(x, y, text) {
         this.text = text;
-        this.x=x;
-        this.y=y;
+        this.x = x;
+        this.y = y;
     }
     //道具的功能
     itsFunction(player) {
@@ -85,12 +84,20 @@ class Daoju {
             //最多HP到10，之后会加分
             if (player.HP <= 8) {
                 player.HP += 2;
-            }else if(player.HP >=8 && player.HP<=10){
+            } else if (player.HP >= 8 && player.HP <= 10) {
                 player.HP = 10;
             }
-            if(player.HP >= 10){
-                score+=20;
+            if (player.HP >= 10) {
+                score += 20;
             }
+        }
+        if (this.text == 'U') {
+            if (player.fireTime > 100) {
+                player.fireTime -= 100;
+            } else {
+                score += 30;
+            }
+
         }
     }
     //状态为0的处理方法
@@ -127,7 +134,7 @@ class Daoju {
             this.life(ctx);
             this.move();
         }
-        if(this.status == 1){
+        if (this.status == 1) {
             this.isPick(ctx);
         }
     }
@@ -136,18 +143,23 @@ class Daoju {
         // ctx.fillStyle = 'rgb(0,0,0)'
         ctx.font = '20px 宋体';
         //ctx.globalAlpha = this.a;
-        ctx.fillStyle = 'rgb(255,215,0,'+this.a+')';
+        ctx.fillStyle = 'rgb(255,215,0,' + this.a + ')';
         ctx.arc(this.x, this.y, this.R, 0, 2 * Math.PI, false);
         ctx.fill();
         ctx.fillStyle = 'rgb(0,0,0)';
-        ctx.fillText(this.text, this.x-5, this.y+6);
-        
+        ctx.fillText(this.text, this.x - 5, this.y + 6);
+
     }
     statusSolve() {
 
     }
     isCrash(player) {
-        if (((player.x - this.x) ** 2 + (player.y - this.y) ** 2) ** 0.5 < this.R + player.R && player.status == 0 &&this.status == 0) {
+        // if(((player.x - this.x) ** 2 + (player.y - this.y) ** 2) ** 0.5 < this.R + player.R){
+        //     console.log('距离'+(((player.x - this.x) ** 2 + (player.y - this.y) ** 2) ** 0.5)+"和"+(this.R + player.R)+"状态:"+player.status+this.status)
+        // }
+        //console.log('距离'+(((player.x - this.x) ** 2 + (player.y - this.y) ** 2) ** 0.5)+"和"+(this.R + player.R)+"状态:"+player.status+this.status)
+        if (((player.x - this.x) ** 2 + (player.y - this.y) ** 2) ** 0.5 < this.R + player.R && player.status == 0 && this.status == 0) {
+            console.log('碰撞');
             this.itsFunction(player);
             this.status = 1;
         }
@@ -166,7 +178,7 @@ class Player {
     BulletSpeed = 6;
     bullet_cth = 0;//将要发射的第n个子弹
     fireTiming = 0;//计算上次发射子弹的时间 
-    fireTime = 500;//发射子弹的间隔时间
+    fireTime = 500;//发射子弹的间隔时间，默认500
     atkMethod;//0普通攻击模式，1散射攻击模式，2激光攻击模式
     magazineClip = [];//弹夹
     booAnimation;
@@ -258,31 +270,32 @@ class Enemy {
     y;
     HP;
     R;
-    speed;
+    color = 'rgb(165,255,45)';
+    speedY;
+    speedX;
     score = 10;//击杀后可以获得的分数
     status = 0;//0存活，1敌人死亡状态，2要求删除
     daojuProbability = 0;//敌人爆出装备的概率
     //爆炸动画
     booAnimation;
-    constructor(name, x, y, HP, R, speed) {
+    constructor(name, x, y, HP, R) {
         this.name = name;
         this.x = x;
         this.y = y;
         this.HP = HP;
         this.R = R;
-        this.speed = speed;
         this.booAnimation = new BooAnimation(this.R, 0.1);
     }
     draw(ctx) {
         ctx.beginPath();
         ctx.strokeStyle = 'rgb(0,0,0)';
-        ctx.fillStyle = 'rgb(165,255,45)';
+        ctx.fillStyle = this.color;
         ctx.arc(this.x, this.y, this.R, 0, Math.PI * 2, false);
         ctx.fill();
     }
     //移动方式
     move() {
-        this.y = this.y + this.speed;
+        this.y = this.y + this.speedY;
     }
     //存活处理
     life(ctx) {
@@ -309,16 +322,21 @@ class Enemy {
             this.die(ctx);
         }
     }
+    daojuMake() {
+        //道具随机生成
+        if (Math.random() <= this.daojuProbability) {
+            let dao = new Daoju(this.x, this.y, daojuText[parseInt(Math.random() * 2)])
+            daoju.push(dao);
+        }
+    }
     //判断碰撞
     isCrash(blt) {
+        //console.log(blt);
         if (((blt.x - this.x) ** 2 + (blt.y - this.y) ** 2) ** 0.5 < this.R + blt.R * 0.8 && blt.status == 0 && this.status == 0) {
             this.HP -= blt.HP;
             if (this.HP <= 0) {
                 score += this.score;
-                if(Math.random()<=this.daojuProbability){//道具随机生成
-                    console.log('道具生成');
-                    daoju.push(new Daoju(this.x,this.y,'H'));
-                }
+                this.daojuMake();
                 this.status = 1;
             }
             return true;
@@ -326,7 +344,39 @@ class Enemy {
         return false;
     }
 }
-
+//敌人类型一
+function makeEnemy01() {
+    let R = mathAnd(10, 40);//半径随机
+    let HP = R / 13;//半径越大，HP越多
+    let speedY = 2.5 - 2 * HP / 4;//HP越多，速度越慢
+    let enemy01 = new Enemy('石头', 30 + Math.random() * 470, Math.random() * (-300), HP, R);
+    enemy01.daojuProbability = 0.05;
+    enemy01.speedY = speedY;
+    return enemy01;
+}
+//敌人类型二
+function makeEnemy02() {
+    let R = 30;
+    let HP = 3;
+    let speedY = 2;
+    let speedX =0.5;
+    let enemy02 = new Enemy('糖葫芦',Math.random()*500,Math.random()*(-300),HP,R);
+    enemy02.speedX = speedX;
+    enemy02.speedY = speedY;
+    enemy02.move = function(){
+        this.y += this.speedY;
+        if(Math.abs(this.x - player.x )>= 4){
+            if(this.x>player.x && this.y<player.y){
+                this.x-=this.speedX;
+            }else{
+                this.x+=this.speedX;
+            }
+        }
+    }
+    enemy02.color = 'rgb(230,0,0)'
+    enemy02.daojuProbability = 0.07;
+    return enemy02;
+}
 class BooAnimation {
     R;
     color = 'rgb(190,15,15)';
@@ -379,6 +429,8 @@ class BooAnimation {
         return false;
     }
 }
+
+
 //获取鼠标的坐标
 gameWindow.onmousemove = function (e) {
     mX = parseInt(e.x - gameWindow.getBoundingClientRect().left);
@@ -390,6 +442,8 @@ gameWindow.onmousemove = function (e) {
 // }
 //初始化游戏
 function initGame() {
+    daoju = [];
+    enemy = [];
     score = 0;
     gameTime = 0;
     player = new Player(4, 250, 400, 1, 1, 4, 0);
@@ -416,18 +470,12 @@ function mathAnd(a, b) {
 function scoreupdata() {
     scoreDiv.innerHTML = '|' + formatZero(score + parseInt(gameTime), 8) + '|';//总分数为score加上时间
 }
-//敌人类型一
-function makeEnemy01() {
-    let R = mathAnd(10, 40);//半径随机
-    let HP = R / 13;//半径越大，HP越多
-    let speed = 2.5 - 2 * HP / 4;//HP越多，速度越慢
-    let enemy01 = new Enemy('石头', 30 + Math.random() * 470, Math.random() * (-300), HP, R, speed);
-    enemy01.daojuProbability = 0.05;
-    return enemy01;
-}
+
 //道具的碰撞检测和删除
 function daojuisCrashandDelete() {
+    //console.log(daoju.length);
     for (let i = 0; i < daoju.length; i++) {
+        //console.log('编号'+i)
         v.isCrash(player);
         if (v.status == 2) {
             daoju.splice(i, 1);
@@ -461,16 +509,24 @@ function enemyisCrashandDelete() {
 function enemyMake() {
 
     //当分数小于100时会生成4个敌人
-    // if (score + gameTime < 100) {
-    //     while(enemy.length<4){
-    //         enemy.push(makeEnemy01());
-    //     }
-    // }
+    if (score + gameTime < 100) {
+        while(enemy.length<3){
+            enemy.push(makeEnemy01());
+        }
+    }else if(score + gameTime>=100){
+        while(enemy.length<4){
+            if(Math.random() > 0.7){
+                enemy.push(makeEnemy02());
+            }else{
+                enemy.push(makeEnemy01());
+            }
+        }
+    }
 
     //测试ing
-    while (enemy.length < 4) {
-        enemy.push(makeEnemy01());
-    }
+    // while (enemy.length < 4) {
+    //     enemy.push(makeEnemy02());
+    // }
 }
 //进行游戏
 function Game() {
