@@ -14,7 +14,8 @@ let gameTimer;
 let player;//玩家
 let enemy = [];//敌人
 let daoju = [];//道具
-let daojuText = ['H', 'U']
+let daojuText = ['H', 'U'];
+let daojusorce = 500;//每500分就发送一个道具
 //子弹类
 class Bullet {
     x;
@@ -271,11 +272,17 @@ class Enemy {
     HP;
     R;
     color = 'rgb(165,255,45)';
-    speedY;
-    speedX;
+    speedY = 1;
+    speedX = 1;
+    orientation;
+    speed;
     score = 10;//击杀后可以获得的分数
     status = 0;//0存活，1敌人死亡状态，2要求删除
     daojuProbability = 0;//敌人爆出装备的概率
+
+    //自由变换参数
+    a; b; c; d;
+
     //爆炸动画
     booAnimation;
     constructor(name, x, y, HP, R) {
@@ -359,23 +366,42 @@ function makeEnemy02() {
     let R = 30;
     let HP = 3;
     let speedY = 2;
-    let speedX =0.5;
-    let enemy02 = new Enemy('糖葫芦',Math.random()*500,Math.random()*(-300),HP,R);
+    let speedX = 0.5;
+    let enemy02 = new Enemy('糖葫芦', Math.random() * 500, Math.random() * (-300), HP, R);
     enemy02.speedX = speedX;
     enemy02.speedY = speedY;
-    enemy02.move = function(){
+    enemy02.move = function () {
         this.y += this.speedY;
-        if(Math.abs(this.x - player.x )>= 4){
-            if(this.x>player.x && this.y<player.y){
-                this.x-=this.speedX;
-            }else{
-                this.x+=this.speedX;
+        if (Math.abs(this.x - player.x) >= 4) {
+            if (this.x > player.x && this.y < player.y) {
+                this.x -= this.speedX;
+            } else {
+                this.x += this.speedX;
             }
         }
     }
     enemy02.color = 'rgb(230,0,0)'
     enemy02.daojuProbability = 0.07;
     return enemy02;
+}
+//敌人类型三
+function makeEnemy03() {
+    let R = 13;
+    let HP = 1;
+    let speed = 4;
+    let enemy03 = new Enemy('导弹', Math.random() * 500, Math.random() * (-300), HP, R);
+    //let enemy03 = new Enemy('导弹',150,150,HP,R);
+    enemy03.daojuProbability = 0.07;
+    enemy03.color = 'rgb(139,0,139)'
+    //enemy03.color = 'rgb(230,0,0)'
+
+    enemy03.a = (player.x - enemy03.x) / (((enemy03.x - player.x) ** 2 + (enemy03.y - player.y) ** 2) ** 0.5);
+    enemy03.b = (player.y - enemy03.y) / (((enemy03.x - player.x) ** 2 + (enemy03.y - player.y) ** 2) ** 0.5);
+    enemy03.move = function () {
+        this.x += speed * this.a;
+        this.y += speed * this.b;
+    }
+    return enemy03;
 }
 class BooAnimation {
     R;
@@ -442,6 +468,7 @@ gameWindow.onmousemove = function (e) {
 // }
 //初始化游戏
 function initGame() {
+    daojusorce = 500;
     daoju = [];
     enemy = [];
     score = 0;
@@ -510,14 +537,25 @@ function enemyMake() {
 
     //当分数小于100时会生成4个敌人
     if (score + gameTime < 100) {
-        while(enemy.length<3){
+        while (enemy.length < 3) {
             enemy.push(makeEnemy01());
         }
-    }else if(score + gameTime>=100){
-        while(enemy.length<4){
-            if(Math.random() > 0.7){
+    } else if (score + gameTime >= 100 && score + gameTime < 500) {
+        while (enemy.length < 4) {
+            if (Math.random() > 0.7) {
+                enemy.push(makeEnemy03());
+            } else {
+                enemy.push(makeEnemy01());
+            }
+        }
+    } else if (score + gameTime >= 500) {
+        while (enemy.length < 5) {
+            let a = Math.random();
+            if (a > 0.8) {
                 enemy.push(makeEnemy02());
-            }else{
+            } else if (a > 0.6) {
+                enemy.push(makeEnemy03());
+            } else {
                 enemy.push(makeEnemy01());
             }
         }
@@ -525,8 +563,17 @@ function enemyMake() {
 
     //测试ing
     // while (enemy.length < 4) {
-    //     enemy.push(makeEnemy02());
+    //     enemy.push(makeEnemy03());
     // }
+}
+//随机生成道具
+function daojuMake() {
+    if (gameTime + score > daojusorce) {
+
+        let dao = new Daoju(Math.random() * 500, Math.random() * (-300), daojuText[parseInt(Math.random() * 2)])
+        daoju.push(dao);
+        daojusorce+=500;
+    }
 }
 //进行游戏
 function Game() {
@@ -537,6 +584,7 @@ function Game() {
         }
         scoreupdata();//更新分数
         daojuisCrashandDelete();//道具碰撞检测，和删除道具
+        daojuMake();//随机发送道具
         enemyisCrashandDelete();//敌人碰撞检测，和删除敌人
         playerisCrash();//玩家碰撞检测
         enemyMake();//敌人生成
@@ -546,11 +594,15 @@ function Game() {
         }//子弹移动
         player.move(ctx, mX, mY);//玩家移动
         for (v of enemy) {
+            //console.log(v.x+"  "+v.y);
             v.updata(ctx);
         }//敌人移动
         for (v of daoju) {
             v.updata(ctx);
+
         }
+
+
     }, 10);
 
 }
