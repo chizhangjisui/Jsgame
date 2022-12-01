@@ -16,8 +16,10 @@ let enemy = [];//敌人
 let daoju = [];//道具
 let daojuText = ['H', 'U'];
 let daojusorce = 500;//每500分就发送一个道具
+let equipment = [];
 //子弹类
 class Bullet {
+    name = 'bullet';
     x;
     y;
     color;
@@ -166,8 +168,191 @@ class Daoju {
         }
     }
 }
+//装备类
+class Equipment {
+    x;
+    y;
+    R = 15;
+    speedX = 1;
+    speedY = 1;
+    speed = player.speed - 0.1;
+    text;
+    status = 0;//0为未拾取状态,1玩家拾取,2可以进行删除
+
+    //变化参数火焰喷射器
+    rw = 5; rh = 0; lw = 5; lh = 0; maxh = 250; maxlh = 250; maxrh = 250; booAnimation; particleRate = 0; fireR; fireL;rF=0;lF=0;atk=0.02;
+    font_size = 20;
+    constructor(x, y, text) {
+        this.x = x;
+        this.y = y;
+        this.text = text;
+        this.booAnimation = new BooAnimation(this.rw * 1.5, 2);
+        this.booAnimation.isTime = false;
+        this.booAnimation.color = 'rgb(255,255,255)'
+        this.booAnimation.color02 = 'rgb(30,144,255)'
+    }
+
+    fire(ctx) {
+        if (this.text == 'F') {
+            this.fireR = this.x + 30;
+            this.fireL = this.x - 30;
+            // ctx.beginPath();
+            // ctx.fillStyle = 'rgb(30,144,255)'
+            // ctx.fillRect(fireL,this.y,this.lw,-this.lh);
+            // ctx.fillRect(fireR,this.y,this.rw,-this.rh);
+            // ctx.fill();
+            if (this.lh < this.maxlh + 3) {
+                this.lh += 6;
+            } else {
+                this.lh = this.maxlh + 3;
+            }
+            if (this.rh < this.maxrh + 3) {
+                this.rh += 6;
+            } else {
+                this.rh = this.maxrh + 3;
+            }
+            if (this.particleRate <= 1) {
+                this.particleRate += 0.05;
+            } else {
+                this.particleRate = 0;
+            }
+
+            this.booAnimation.drew(ctx, this.fireL, this.y - this.lh);
+            this.booAnimation.drew(ctx, this.fireR, this.y - this.rh);
+            for (let i = 0; i < this.lh / 2; i++) {
+                if (i < this.lh * 0.40) {
+                    let x = this.fireL - 1.5 - this.lw + Math.random() * (this.lw + 3)
+                    let y = this.y - Math.random() * this.lh * this.particleRate;
+                    ctx.beginPath();
+                    ctx.fillStyle = 'rgb(255,228,196)'
+                    ctx.arc(x, y, 2, 0, 2 * Math.PI, false);
+                    ctx.fill();
+                } else {
+                    let x = this.fireL - 1.5 - this.lw + Math.random() * (this.lw + 3)
+                    let y = this.y - Math.random() * this.lh;
+                    ctx.beginPath();
+                    ctx.fillStyle = 'rgb(255,0,0)'
+                    ctx.arc(x, y, 3, 0, 2 * Math.PI, false);
+                    ctx.fill();
+                }
+
+            }
+            for (let i = 0; i < this.rh / 2; i++) {
+                if (i < this.rh * 0.40) {
+                    let x = this.fireR - 1.5 - this.rw + Math.random() * (this.rw + 3)
+                    let y = this.y - Math.random() * this.rh * this.particleRate;
+                    ctx.beginPath();
+                    ctx.fillStyle = 'rgb(255,228,196)'
+                    ctx.arc(x, y, 2, 0, 2 * Math.PI, false);
+                    ctx.fill();
+                } else {
+                    let x = this.fireR - 1.5 - this.rw + Math.random() * (this.rw + 3)
+                    let y = this.y - Math.random() * this.rh;
+                    ctx.beginPath();
+                    ctx.fillStyle = 'rgb(255,0,0)'
+                    ctx.arc(x, y, 3, 0, 2 * Math.PI, false);
+                    ctx.fill();
+                }
+
+            }
+        }
+    }
+    //移动方式01
+    move01() {
+        this.y += this.speedY;
+        this.x += this.speedX;
+        if (this.x > 500) {
+            this.speedX = -this.speedX;
+        }
+        if (this.x < 0) {
+            this.speedX = -this.speedX;
+        }
+        if (this.y > 510) {
+            this.status = 2;
+        }
+    }
+    //移动方式02
+    move02() {
+        if (((player.x - this.x) ** 2 + (player.y - this.y) ** 2) ** 0.5 > 3) {//防止出现抖动
+            this.x = this.x + this.speed * (player.x - this.x) / (((player.x - this.x) ** 2 + (player.y - this.y) ** 2) ** 0.5);
+            this.y = this.y + this.speed * (player.y - this.y) / (((player.x - this.x) ** 2 + (player.y - this.y) ** 2) ** 0.5);
+        }
+    }
+    //绘画方式01
+    drew01(ctx) {
+        ctx.beginPath();
+        ctx.fillStyle = 'rgb(30,144,255)'
+        ctx.arc(this.x, this.y, this.R, 0, 2 * Math.PI, false);
+        ctx.fill();
+        ctx.font = '20px 宋体';
+        ctx.fillStyle = 'rgb(0,0,0)';
+        ctx.fillText(this.text, this.x - 5, this.y + 6);
+    }
+
+    drew02(ctx) {
+        if (this.R > 8) {
+            this.R--;
+        }
+        ctx.beginPath();
+        ctx.fillStyle = 'rgb(30,144,255)'
+        ctx.arc(this.x, this.y, this.R, 0, 2 * Math.PI, false);
+        ctx.fill();
+        if (this.font_size > 1) {
+            this.font_size--;
+            ctx.font = this.font_size + 'px 宋体';
+            ctx.fillStyle = 'rgb(0,0,0)';
+            ctx.fillText(this.text, this.x - 5, this.y + 6);
+        }
+
+    }
+    updata(ctx) {
+        if (this.status == 0) {
+            this.move01();
+            this.drew01(ctx);
+        } else if (this.status == 1) {
+            this.fire(ctx);
+            this.move02();
+            this.drew02(ctx);
+        }
+    }
+
+    isCrash(v) {
+        //this.maxrh = this.maxh;
+        if (((v.x - this.x) ** 2 + (v.y - this.y) ** 2) ** 0.5 < this.R + v.R && v.status == 0 && this.status == 0 && v.name == 'player') {
+            if(!v.hasequipmentF){
+                this.status = 1;
+            }else{
+                this.status = 2;
+            }
+            
+        }
+        if (this.status == 1 && Math.abs(v.x - this.fireL) < v.R && v.y +v.R*0.8< this.y && v.y +v.R*0.8> this.y - this.lh && v.status == 0 && v.name != 'player') {
+            v.HP-=this.atk;
+            this.maxlh = Math.abs(v.y +v.R*0.8- this.y) < this.maxh ? Math.abs(v.y +v.R*0.8- this.y) : this.maxh;
+            this.lF+=1;
+            if (v.HP <= 0) {
+                score += v.score;
+                v.daojuMake();
+                v.status = 1;
+            }
+        }
+        if (this.status == 1 && Math.abs(v.x - this.fireR) < v.R && v.y +v.R*0.8< this.y && v.y +v.R*0.8> this.y - this.rh && v.status == 0&& v.name != 'player') {
+            v.HP-=this.atk;
+            //console.log('击中目标');
+            this.maxrh = Math.abs(v.y +v.R*0.8- this.y) < this.maxh ? Math.abs(v.y +v.R*0.8- this.y) : this.maxh;
+            this.rF+=1;
+            if (v.HP <= 0) {
+                score += v.score;
+                v.daojuMake();
+                v.status = 1;
+            }
+        }
+    }
+
+}
 //玩家类
 class Player {
+    name = 'player';
     HP;
     x;
     y;
@@ -183,6 +368,7 @@ class Player {
     atkMethod;//0普通攻击模式，1散射攻击模式，2激光攻击模式
     magazineClip = [];//弹夹
     booAnimation;
+    hasequipmentF = false;//装备了F装备是否
     constructor(HP, x, y, atk, df, speed, atkMethod) {
         this.HP = HP;
         this.x = x;
@@ -257,6 +443,7 @@ class Player {
         if (((blt.x - this.x) ** 2 + (blt.y - this.y) ** 2) ** 0.5 < blt.R + this.R && blt.status == 0 && this.status == 0) {
             this.HP = this.HP - blt.HP//与撞击物的HP相减
             if (this.HP <= 0) {
+                equipment = [];
                 this.status = 1;
             }
             return true;
@@ -335,11 +522,16 @@ class Enemy {
             let dao = new Daoju(this.x, this.y, daojuText[parseInt(Math.random() * 2)])
             daoju.push(dao);
         }
+        //装备随机生成
+        if (Math.random() <= this.daojuProbability*0.5) {
+            let eq = new Equipment(this.x, this.y,'F')
+            equipment.push(eq);
+        }
     }
     //判断碰撞
     isCrash(blt) {
         //console.log(blt);
-        if (((blt.x - this.x) ** 2 + (blt.y - this.y) ** 2) ** 0.5 < this.R + blt.R * 0.8 && blt.status == 0 && this.status == 0) {
+        if (((blt.x - this.x) ** 2 + (blt.y - this.y) ** 2) ** 0.5 < this.R + blt.R * 0.8 && blt.status == 0 && this.status == 0 && blt.name == 'bullet') {
             this.HP -= blt.HP;
             if (this.HP <= 0) {
                 score += this.score;
@@ -406,9 +598,11 @@ function makeEnemy03() {
 class BooAnimation {
     R;
     color = 'rgb(190,15,15)';
+    color02 = 'rgb(200,100,50)';
     stutas = 1;
     timer = 0;
     time = 100;//爆炸持续时间
+    isTime = true;//false火花无限时间
 
     //动画所要的参数
     r = 0;
@@ -421,7 +615,7 @@ class BooAnimation {
     }
     drew(ctx, X, Y) {
         this.timer++;
-        if (this.timer > this.time) {
+        if (this.timer > this.time && this.isTime) {
             return true;
         }
 
@@ -445,7 +639,7 @@ class BooAnimation {
                 r = 3 * Math.random()
             }
             if (R < this.r * 0.4) {
-                ctx.fillStyle = 'rgb(200,100,50)';
+                ctx.fillStyle = this.color02;
             } else {
                 ctx.fillStyle = this.color;
             }
@@ -503,9 +697,27 @@ function daojuisCrashandDelete() {
     //console.log(daoju.length);
     for (let i = 0; i < daoju.length; i++) {
         //console.log('编号'+i)
-        v.isCrash(player);
-        if (v.status == 2) {
+        daoju[i].isCrash(player);
+        if (daoju[i].status == 2) {
             daoju.splice(i, 1);
+        }
+    }
+}
+//装备的碰撞检测和删除
+function equipmentisCrashandDelete() {
+    for (let i = 0; i < equipment.length; i++) {
+        equipment[i].isCrash(player)
+        for (v of enemy) {
+            equipment[i].isCrash(v);
+        }
+        if(equipment[i].text == 'F'){
+            if(equipment[i].rF == 0) equipment[i].maxrh = equipment[i].maxh;
+            equipment[i].rF = 0;
+            if(equipment[i].lF == 0) equipment[i].maxlh = equipment[i].maxh;
+            equipment[i].lF = 0;
+        }
+        if (equipment[i].status == 2) {
+            equipment.splice(i, 1);
         }
     }
 }
@@ -514,6 +726,7 @@ function playerisCrash() {
     //判断玩家是否与敌人发生撞击
     for (let i = 0; i < enemy.length; i++) {
         player.isCrash(enemy[i]);
+
     }
 }
 //敌人碰撞检测，和删除敌人
@@ -548,7 +761,7 @@ function enemyMake() {
                 enemy.push(makeEnemy01());
             }
         }
-    } else if (score + gameTime >= 500) {
+    } else if (score + gameTime >= 500 && score + gameTime < 1000) {
         while (enemy.length < 5) {
             let a = Math.random();
             if (a > 0.8) {
@@ -559,21 +772,35 @@ function enemyMake() {
                 enemy.push(makeEnemy01());
             }
         }
+    } else if (score + gameTime >= 1000) {
+        while (enemy.length < 7) {
+            let a = Math.random();
+            if (a > 0.7) {
+                enemy.push(makeEnemy02());
+            } else if (a > 0.5) {
+                enemy.push(makeEnemy03());
+            } else {
+                enemy.push(makeEnemy01());
+            }
+        }
     }
 
     //测试ing
-    // while (enemy.length < 4) {
-    //     enemy.push(makeEnemy03());
+    // while (enemy.length < 1) {
+    //     enemy.push(makeEnemy01());
     // }
 }
+
+let a = true;
 //随机生成道具
 function daojuMake() {
     if (gameTime + score > daojusorce) {
 
         let dao = new Daoju(Math.random() * 500, Math.random() * (-300), daojuText[parseInt(Math.random() * 2)])
         daoju.push(dao);
-        daojusorce+=500;
+        daojusorce += 500;
     }
+
 }
 //进行游戏
 function Game() {
@@ -585,6 +812,7 @@ function Game() {
         scoreupdata();//更新分数
         daojuisCrashandDelete();//道具碰撞检测，和删除道具
         daojuMake();//随机发送道具
+        equipmentisCrashandDelete();
         enemyisCrashandDelete();//敌人碰撞检测，和删除敌人
         playerisCrash();//玩家碰撞检测
         enemyMake();//敌人生成
@@ -599,8 +827,10 @@ function Game() {
         }//敌人移动
         for (v of daoju) {
             v.updata(ctx);
-
-        }
+        }//道具
+        for (v of equipment) {
+            v.updata(ctx);
+        }//装备
 
 
     }, 10);
