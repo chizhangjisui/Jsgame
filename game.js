@@ -178,9 +178,9 @@ class Equipment {
     speed = player.speed - 0.1;
     text;
     status = 0;//0为未拾取状态,1玩家拾取,2可以进行删除
-
+    lv = 0;
     //变化参数火焰喷射器
-    rw = 5; rh = 0; lw = 5; lh = 0; maxh = 250; maxlh = 250; maxrh = 250; booAnimation; particleRate = 0; fireR; fireL;rF=0;lF=0;atk=0.02;
+    rw = 5; rh = 0; lw = 5; lh = 0; maxh = 250; maxlh = 250; maxrh = 250; booAnimation; particleRate = 0; fireR; fireL; rF = 0; lF = 0; atk = 0.02; fireW = 50;
     font_size = 20;
     constructor(x, y, text) {
         this.x = x;
@@ -194,8 +194,8 @@ class Equipment {
 
     fire(ctx) {
         if (this.text == 'F') {
-            this.fireR = this.x + 30;
-            this.fireL = this.x - 30;
+            this.fireR = this.x + this.fireW;
+            this.fireL = this.x - this.fireW+this.lw/2;
             // ctx.beginPath();
             // ctx.fillStyle = 'rgb(30,144,255)'
             // ctx.fillRect(fireL,this.y,this.lw,-this.lh);
@@ -237,7 +237,7 @@ class Equipment {
                 }
 
             }
-            for (let i = 0; i < this.rh / 2; i++) {
+            for (let i = 0; i < this.rh  / 2; i++) {
                 if (i < this.rh * 0.40) {
                     let x = this.fireR - 1.5 - this.rw + Math.random() * (this.rw + 3)
                     let y = this.y - Math.random() * this.rh * this.particleRate;
@@ -319,28 +319,44 @@ class Equipment {
     isCrash(v) {
         //this.maxrh = this.maxh;
         if (((v.x - this.x) ** 2 + (v.y - this.y) ** 2) ** 0.5 < this.R + v.R && v.status == 0 && this.status == 0 && v.name == 'player') {
-            if(!v.hasequipmentF){
+            if (!v.hasequipmentF) {
                 this.status = 1;
-            }else{
+                v.hasequipmentF = true;
+                v.equipmentF = this;
+                this.lv++;
+            } else {
                 this.status = 2;
+                
+                if (v.equipmentF.lv <= 5) {
+                    v.equipmentF.atk *= 1.2;
+                    v.equipmentF.maxh += 25;
+                    v.equipmentF.lw += 3;
+                    v.equipmentF.rw += 3;
+                    v.equipmentF.fireW += 6;
+                    v.equipmentF.lv++;
+                    
+                }else{
+                    score+=50;
+                }
+
             }
-            
+
         }
-        if (this.status == 1 && Math.abs(v.x - this.fireL) < v.R && v.y +v.R*0.8< this.y && v.y +v.R*0.8> this.y - this.lh && v.status == 0 && v.name != 'player') {
-            v.HP-=this.atk;
-            this.maxlh = Math.abs(v.y +v.R*0.8- this.y) < this.maxh ? Math.abs(v.y +v.R*0.8- this.y) : this.maxh;
-            this.lF+=1;
+        if (this.status == 1 && Math.abs(v.x + this.lw / 2 - this.fireL) < v.R + this.lw / 2 && v.y + v.R * 0.8 < this.y && v.y + v.R * 0.8 > this.y - this.lh && v.status == 0 && v.name != 'player') {
+            v.HP -= this.atk;
+            this.maxlh = Math.abs(v.y + v.R * 0.8 - this.y) < this.maxh ? Math.abs(v.y + v.R * 0.8 - this.y) : this.maxh;
+            this.lF += 1;
             if (v.HP <= 0) {
                 score += v.score;
                 v.daojuMake();
                 v.status = 1;
             }
         }
-        if (this.status == 1 && Math.abs(v.x - this.fireR) < v.R && v.y +v.R*0.8< this.y && v.y +v.R*0.8> this.y - this.rh && v.status == 0&& v.name != 'player') {
-            v.HP-=this.atk;
+        if (this.status == 1 && Math.abs(v.x + this.rw / 2 - this.fireR) < v.R + this.rw && v.y + v.R * 0.8 < this.y && v.y + v.R * 0.8 > this.y - this.rh && v.status == 0 && v.name != 'player') {
+            v.HP -= this.atk;
             //console.log('击中目标');
-            this.maxrh = Math.abs(v.y +v.R*0.8- this.y) < this.maxh ? Math.abs(v.y +v.R*0.8- this.y) : this.maxh;
-            this.rF+=1;
+            this.maxrh = Math.abs(v.y + v.R * 0.8 - this.y) < this.maxh ? Math.abs(v.y + v.R * 0.8 - this.y) : this.maxh;
+            this.rF += 1;
             if (v.HP <= 0) {
                 score += v.score;
                 v.daojuMake();
@@ -369,6 +385,7 @@ class Player {
     magazineClip = [];//弹夹
     booAnimation;
     hasequipmentF = false;//装备了F装备是否
+    equipmentF;
     constructor(HP, x, y, atk, df, speed, atkMethod) {
         this.HP = HP;
         this.x = x;
@@ -523,8 +540,8 @@ class Enemy {
             daoju.push(dao);
         }
         //装备随机生成
-        if (Math.random() <= this.daojuProbability*0.5) {
-            let eq = new Equipment(this.x, this.y,'F')
+        if (Math.random() <= this.daojuProbability * 0.5) {
+            let eq = new Equipment(this.x, this.y, 'F')
             equipment.push(eq);
         }
     }
@@ -710,10 +727,10 @@ function equipmentisCrashandDelete() {
         for (v of enemy) {
             equipment[i].isCrash(v);
         }
-        if(equipment[i].text == 'F'){
-            if(equipment[i].rF == 0) equipment[i].maxrh = equipment[i].maxh;
+        if (equipment[i].text == 'F') {
+            if (equipment[i].rF == 0) equipment[i].maxrh = equipment[i].maxh;
             equipment[i].rF = 0;
-            if(equipment[i].lF == 0) equipment[i].maxlh = equipment[i].maxh;
+            if (equipment[i].lF == 0) equipment[i].maxlh = equipment[i].maxh;
             equipment[i].lF = 0;
         }
         if (equipment[i].status == 2) {
@@ -800,6 +817,18 @@ function daojuMake() {
         daoju.push(dao);
         daojusorce += 500;
     }
+
+    //test
+    // if (a) {
+
+    //     for (let i = 0; i < 10; i++) {
+    //         console.log('执行');
+    //         let eq = new Equipment(Math.random() * 400, 0, 'F')
+    //         equipment.push(eq);
+    //     }
+    //     a = false;
+    // }
+
 
 }
 //进行游戏
